@@ -3,7 +3,7 @@ from PyQt5.QtGui import QIcon
 
 import mobase
 
-class EnableByLoadOrder(mobase.IPluginTool):
+class PluginSync(mobase.IPluginTool):
 
     _organizer: mobase.IOrganizer
     _modList: mobase.IModList
@@ -19,13 +19,13 @@ class EnableByLoadOrder(mobase.IPluginTool):
         return True
 
     def name(self):
-        return "Sync Load Order"
+        return "Sync Plugins"
 
     def author(self):
         return "coldrifting"
 
     def description(self):
-        return "Syncs plugin order with mod order"
+        return "Syncs plugin load order with mod order"
 
     def version(self):
         return mobase.VersionInfo(0, 1, 0, mobase.ReleaseType.FINAL)
@@ -63,17 +63,20 @@ class EnableByLoadOrder(mobase.IPluginTool):
         # Merge masters into the plugin list at the begining
         allPlugins = masters + plugins
 
-        # Set the new load order
-        print(allPlugins)
-        self._pluginList.setLoadOrder(allPlugins)
 
-        # for plugin in allPlugins:
-        #    print(plugin)
-        #    self._pluginList
+        # Set the new load order
+        for priority, plugin in reversed(list(enumerate(allPlugins))):
+            self._pluginList.setPriority(plugin, priority)
+
+        # Not sure why this doesn't work
+        # self._pluginList.setLoadOrder(allPlugins)
+
+        # Refresh the UI
+        self._organizer.refresh(save_changes=True)
         return True
 
     def displayName(self):
-        return "Sync Load Order"
+        return "Sync Plugins"
 
     def tooltip(self):
         return "Enables all Mods one at a time to match load order"
@@ -83,4 +86,4 @@ class EnableByLoadOrder(mobase.IPluginTool):
 
 
 def createPlugin() -> mobase.IPluginTool:
-    return EnableByLoadOrder()
+    return PluginSync()
