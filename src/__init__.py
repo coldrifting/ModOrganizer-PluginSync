@@ -1,5 +1,4 @@
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QMessageBox
 
 import mobase
 
@@ -9,7 +8,8 @@ class GamePluginsRequirement(mobase.IPluginRequirement):
         super().__init__()
 
     def check(self, organizer: mobase.IOrganizer):
-        if organizer.managedGame() and not organizer.managedGame().feature(mobase.GamePlugins):
+        managedGame = organizer.managedGame()
+        if (managedGame and not managedGame.feature(mobase.GamePlugins)):
             return mobase.IPluginRequirement.Problem(
                 "This plugin can only be enabled for games with plugins.")
 
