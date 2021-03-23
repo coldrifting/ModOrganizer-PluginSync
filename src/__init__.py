@@ -1,60 +1,86 @@
 from PyQt5.QtGui import QIcon
-from typing import List
+# from typing import List
 
 import mobase
 
 class EnableByLoadOrder(mobase.IPluginTool):
 
-	_organizer: mobase.IOrganizer
-	_modList: mobase.IModList
+    _organizer: mobase.IOrganizer
+    _modList: mobase.IModList
+    _pluginList: mobase.IPluginList
 
-	def __init__(self):
-		super().__init__()
+    def __init__(self):
+        super().__init__()
 
-	def init(self, organizer: mobase.IOrganizer):
-		self._organizer = organizer
-		self._modList = organizer.modList()
-		return True
+    def init(self, organizer: mobase.IOrganizer):
+        self._organizer = organizer
+        self._modList = organizer.modList()
+        self._pluginList = organizer.pluginList()
+        return True
 
-	def name(self):
-		return "Sync Load Order"
+    def name(self):
+        return "Sync Load Order"
 
-	def author(self):
-		return "coldrifting"
+    def author(self):
+        return "coldrifting"
 
-	def description(self):
-		return "Enables all mods in the left pane one at a time, so that they match the load order"
+    def description(self):
+        return "Syncs plugin order with mod order"
 
-	def version(self):
-		return mobase.VersionInfo(0, 1, 0, mobase.ReleaseType.FINAL)
+    def version(self):
+        return mobase.VersionInfo(0, 1, 0, mobase.ReleaseType.FINAL)
 
-	def isActive(self):
-		return True
+    def isActive(self):
+        return True
 
-	def settings(self):
-		return []
+    def settings(self):
+        return []
 
-	def display(self):
-		allMods = self._modList.allModsByProfilePriority()
+    def display(self):
+        allPlugins = self._pluginList.pluginNames()
+        allPlugins = sorted(
+            allPlugins,
+            key=lambda
+            plugin: self._modList.priority(self._pluginList.origin(plugin))
+        )
 
-		for modName in allMods:
-			modClass = self._modList.getMod(modName)
-			# Get Inactive mods that aren't separators
-			if not (modClass.isSeparator()):
-				if not (self._modList.state(modName) & mobase.ModState.ACTIVE):
-						# Activate mods one at a time
-						self._modList.setActive(modName, True)
+        # Extract master files
+        plugins = []
+        masters = []
+        for plugin in allPlugins:
+            if (self._pluginList.isMaster(plugin)):
+                masters.append(plugin)
+            else:
+                plugins.append(plugin)
 
-		return True
+        # Sort DLC correctly (Unmanaged Files)
+        masters[0] = "Skyrim.esm"
+        masters[1] = "Update.esm"
+        masters[2] = "Dawnguard.esm"
+        masters[3] = "HearthFires.esm"
+        masters[4] = "Dragonborn.esm"
 
-	def displayName(self):
-		return "Sync Load Order"
+        # Merge masters into the plugin list at the begining
+        allPlugins = masters + plugins
 
-	def tooltip(self):
-		return "Enables all Mods one at a time to match load order"
+        # Set the new load order
+        print(allPlugins)
+        self._pluginList.setLoadOrder(allPlugins)
 
-	def icon(self):
-		return QIcon()
+        # for plugin in allPlugins:
+        #    print(plugin)
+        #    self._pluginList
+        return True
+
+    def displayName(self):
+        return "Sync Load Order"
+
+    def tooltip(self):
+        return "Enables all Mods one at a time to match load order"
+
+    def icon(self):
+        return QIcon()
+
 
 def createPlugin() -> mobase.IPluginTool:
-	return EnableByLoadOrder()
+    return EnableByLoadOrder()
