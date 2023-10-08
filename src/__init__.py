@@ -47,20 +47,6 @@ class Plugin:
         # generally shorter should come first
         return len(lc_a) < len(lc_b) or self.name < other.name
 
-'''
-class GamePluginsRequirement(mobase.IPluginRequirement):
-
-    def __init__(self):
-        super().__init__()
-
-    def check(self, organizer: mobase.IOrganizer):
-        managedGame = organizer.managedGame()
-        if (managedGame and not managedGame.feature(mobase.GamePlugins)):
-            return mobase.IPluginRequirement.Problem(
-                "This plugin can only be enabled for games with plugins.")
-
-        return None '''
-
 class PluginSync(mobase.IPluginTool):
 
     _organizer: mobase.IOrganizer
