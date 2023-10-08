@@ -1,8 +1,6 @@
-from PyQt5.QtGui import QIcon
-
 import mobase
 import re
-
+from typing import List
 
 class Plugin:
     def __init__(self, priority, name):
@@ -15,7 +13,7 @@ class Plugin:
             # "mod2 regex": ["substr in 1st", "substr in 2nd", "etc."]
         }
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         if self.priority != other.priority:
             return self.priority < other.priority
 
@@ -49,7 +47,7 @@ class Plugin:
         # generally shorter should come first
         return len(lc_a) < len(lc_b) or self.name < other.name
 
-
+'''
 class GamePluginsRequirement(mobase.IPluginRequirement):
 
     def __init__(self):
@@ -61,14 +59,15 @@ class GamePluginsRequirement(mobase.IPluginRequirement):
             return mobase.IPluginRequirement.Problem(
                 "This plugin can only be enabled for games with plugins.")
 
-        return None
-
+        return None '''
 
 class PluginSync(mobase.IPluginTool):
 
     _organizer: mobase.IOrganizer
     _modList: mobase.IModList
     _pluginList: mobase.IPluginList
+
+    _isMo2Updated: bool
 
     def __init__(self):
         super().__init__()
@@ -77,27 +76,53 @@ class PluginSync(mobase.IPluginTool):
         self._organizer = organizer
         self._modList = organizer.modList()
         self._pluginList = organizer.pluginList()
+
+        version = self._organizer.appVersion().canonicalString()
+        versionx = re.sub("[^0-9.]", "", version)
+        self._version = float(".".join(versionx.split(".", 2)[:-1]))
+        self._isMo2Updated = self._version >= 2.5
+
         return True
 
-    def name(self):
+    # Basic info
+    def name(self) -> str:
         return "Sync Plugins"
 
-    def author(self):
+    def author(self) -> str:
         return "coldrifting"
 
-    def description(self):
+    def description(self) -> str:
         return "Syncs plugin load order with mod order"
 
-    def version(self):
-        return mobase.VersionInfo(1, 0, 0, mobase.ReleaseType.FINAL)
+    def version(self) -> mobase.VersionInfo:
+        return mobase.VersionInfo(1, 2, 0, mobase.ReleaseType.FINAL)
 
-    def isActive(self):
+    # Settings
+    def isActive(self) -> str:
         return (self._organizer.managedGame().feature(mobase.GamePlugins))
 
-    def settings(self):
-        return []
+    def settings(self) -> List[mobase.PluginSetting]:
+        return [
+            mobase.PluginSetting("enabled", "enable this plugin", True)
+        ]
 
-    def display(self):
+    # Display
+    def displayName(self) -> str:
+        return "Sync Plugins"
+
+    def tooltip(self) -> str:
+        return "Enables all Mods one at a time to match load order"
+
+    def icon(self):
+        if (self._isMo2Updated):
+            from PyQt6.QtGui import QIcon
+        else:
+            from PyQt5.QtGui import QIcon
+
+        return QIcon()
+
+    # Plugin Logic
+    def display(self) -> bool:
         # Get all plugins as a list
         allPlugins = self._pluginList.pluginNames()
 
@@ -112,7 +137,12 @@ class PluginSync(mobase.IPluginTool):
         plugins = []
         masters = []
         for plugin in allPlugins:
-            if (self._pluginList.isMaster(plugin)):
+            if (self._isMo2Updated):
+                isMasterPlugin = self._pluginList.isMasterFlagged(plugin)
+            else:
+                isMasterPlugin = self._pluginList.isMaster(plugin)
+
+            if (isMasterPlugin):
                 masters.append(plugin)
             else:
                 plugins.append(plugin)
@@ -132,18 +162,7 @@ class PluginSync(mobase.IPluginTool):
 
         return True
 
-    def displayName(self):
-        return "Sync Plugins"
 
-    def tooltip(self):
-        return "Enables all Mods one at a time to match load order"
-
-    def icon(self):
-        return QIcon()
-
-    def requirements(self):
-        return [GamePluginsRequirement()]
-
-
-def createPlugin() -> mobase.IPluginTool:
+# Tell Mod Organizer to initialize the plugin
+def createPlugin() -> mobase.IPlugin:
     return PluginSync()
